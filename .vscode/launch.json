@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug capture.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/capture.py",
+            "args": [
+                "-r",
+                "baselineTeam",
+                "-b",
+                "myTeam"
+            ]
+        }
+    ]
+}
