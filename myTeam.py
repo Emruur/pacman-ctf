@@ -17,7 +17,7 @@ import random, time, util
 from game import Directions
 import game
 from MCTS import MCTS
-
+from baselineTeam import ReflexCaptureAgent
 #################
 # Team creation #
 #################
@@ -82,5 +82,6 @@ class DummyAgent(CaptureAgent):
 	def chooseAction(self, gameState):
 		mcts= MCTS(self.index, gameState)
 		best_move= mcts.run()
+		print(self.index, best_move)
 		return best_move
 

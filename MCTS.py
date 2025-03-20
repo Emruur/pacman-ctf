@@ -2,6 +2,49 @@ import copy
 import random
 import math
 import time 
+from baselineTeam import ReflexCaptureAgent
+from baselineTeam import OffensiveReflexAgent
+from baselineTeam import DefensiveReflexAgent
+
+def binary_score_with_food_stats(game_state):
+    """
+    Computes a binary score for the game based on the final score and
+    prints additional details regarding the food returned by each team.
+
+    Returns:
+        1  if the final score is positive (Red wins),
+       -1  if the final score is negative (Blue wins),
+        0  if the final score is zero (tie).
+    """
+    final_score = game_state.data.score
+
+    # Compute food returned counts for each team.
+    red_food = 0
+    blue_food = 0
+    num_agents = game_state.getNumAgents()
+    for i in range(num_agents):
+        agent_state = game_state.data.agentStates[i]
+        # Assume game_state.getRedTeamIndices() returns a list of indices for Red agents.
+        if i in game_state.getRedTeamIndices():
+            red_food += agent_state.numReturned
+        else:
+            blue_food += agent_state.numReturned
+
+    # Print additional statistics.
+    print("Red team's food returned:", red_food)
+    print("Blue team's food returned:", blue_food)
+    print("Final game score:", final_score)
+
+    # Determine and print the result.
+    if final_score > 0:
+        print("Result: Red wins")
+        return 1
+    elif final_score < 0:
+        print("Result: Blue wins")
+        return -1
+    else:
+        print("Result: Tie")
+        return 0
 
 class MCTSNode:
     def __init__(self, agent_id, state, parent=None, action=None):
@@ -89,23 +132,42 @@ class MCTSNode:
             The game score from the rollout (typically from the perspective of red).
         """
         simulation_state = copy.deepcopy(self.state)
-        current_agent = self.agent_id
+        curr_agent_id = self.agent_id
         move_count= 0
+
+        agents_defense= [DefensiveReflexAgent(i) for i in range(2)]
+        agents_offense= [OffensiveReflexAgent(i) for i in range(2)]
+        agents= agents_defense + agents_offense
+        list(map(lambda agent: agent.registerInitialState(simulation_state), agents))
+
         
         # Rollout until the game is over.
-        # TODO we probably want to make 1200 dynamic 
+        # TODO we probably want to make 1200 variable 
         while not simulation_state.isOver() and move_count <= 1200:
             move_count += 1
-            legal_actions = simulation_state.getLegalActions(current_agent)
+            legal_actions = simulation_state.getLegalActions(curr_agent_id)
+            curr_agent= agents[curr_agent_id]
             if not legal_actions:
                 break  # no legal moves available
-            action = random.choice(legal_actions)
-            simulation_state = simulation_state.generateSuccessor(current_agent, action)
-            current_agent = (current_agent + 1) % 4
+
+            #action = random.choice(legal_actions)
+            action= curr_agent.chooseAction(simulation_state)
+            #simulation_state= simulation_state.generateSuccessor(curr_agent_id, action)
+            simulation_state = curr_agent.getSuccessor(simulation_state, action)
+            curr_agent_id = (curr_agent_id + 1) % 4
         
         # Return the final game score (assumed to be at simulation_state.data.score)
         #print(f"Rolled {move_count} states")
-        return simulation_state.data.score
+
+        #FIXME always getting 0 score
+        print("Rollout ended: ",simulation_state.data.score,"in",move_count,"steps", "game over:",simulation_state.isOver())
+        # for i in range(4):
+        #     myState = simulation_state.getAgentState(i)
+        #     myPos = myState.getPosition() 
+        #     print(i,": ",myPos)
+
+        score= binary_score_with_food_stats(simulation_state)
+        return score
 
     def backpropagate(self, rollout_score):
         """
@@ -127,7 +189,7 @@ class MCTSNode:
             node = node.parent
 
 class MCTS:
-    def __init__(self, agent_id, game_state, iterations=1000):
+    def __init__(self, agent_id, game_state, iterations=10):
         """
         Initialize MCTS with the starting agent and game state.
         
@@ -170,7 +232,7 @@ class MCTS:
             end_time = time.time()  # record the end time
             elapsed_time = end_time - start_time  # calculate elapsed time in seconds
 
-            #print(f"Rollout {i} ended with score {rollout_score} in {elapsed_time:.2f} seconds")
+            print(f"Rollout {i} ended with score {rollout_score} in {elapsed_time:.2f} seconds")
                         
             # 4. Backpropagation: propagate the score back up the tree.
             node.backpropagate(rollout_score)
