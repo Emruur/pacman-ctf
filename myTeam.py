@@ -80,7 +80,11 @@ class DummyAgent(CaptureAgent):
 
 
 	def chooseAction(self, gameState):
-		mcts= MCTS(self.index, gameState)
+		iterations = 200
+		state_heuristic= False
+		rollout_method= "reflex"
+		rollout_depth= 500
+		mcts= MCTS(self.index, gameState, iterations= iterations, state_heuristic=state_heuristic, rollout_method=rollout_method, rollout_depth= rollout_depth)
 		best_move= mcts.run()
 		print(self.index, best_move)
 		return best_move
