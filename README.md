@@ -122,14 +122,14 @@ MCTS_Node(agent id, game_state)
 
 
 # Heuristic Agent
-
+### Main idea:
 1. Uses a state evaluation function\
 2. which should be usable with MCTS
-
-Less food on opponents side: -1 for each food on opponents side
-More food on own side: +1 for each food on own side
-Opponent on opposite side: 
-More distance to opponent on opponent’s side: +1 per unit distance if agent is pacman and opponent is ghost
-Less distance to opponent on own side: -1 per unit distance if agent is ghost and opponent is pacman
+State evaluation:
+1. Less food on opponents side: -1 for each food on opponents side
+2. More food on own side: +1 for each food on own side
+3. Opponent on opposite side: 
+4. More distance to opponent on opponent’s side: +1 per unit distance if agent is pacman and opponent is ghost
+5. Less distance to opponent on own side: -1 per unit distance if agent is ghost and opponent is pacman
 
 e.g. 10 food on either side, opponents in starting columns: (+10)+(-10)+(0+0)=0
