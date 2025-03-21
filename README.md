@@ -125,7 +125,7 @@ MCTS_Node(agent id, game_state)
 ### Main idea:
 1. Uses a state evaluation function\
 2. which should be usable with MCTS
-State evaluation:
+### State evaluation:
 1. Less food on opponents side: -1 for each food on opponents side
 2. More food on own side: +1 for each food on own side
 3. Opponent on opposite side: 
