@@ -74,6 +74,8 @@ class DummyAgent(OffensiveReflexAgent):
 		CaptureAgent.registerInitialState in captureAgents.py.
 		'''
 		CaptureAgent.registerInitialState(self, gameState)
+		self.start = gameState.getAgentPosition(self.index)
+
 
 		'''
 		Your initialization code goes here, if you need any.
@@ -81,17 +83,33 @@ class DummyAgent(OffensiveReflexAgent):
 
 
 	def chooseAction(self, gameState):
-		print(self.evaluate_state(gameState))
+		# print(self.evaluate_state(gameState))
 		actions = gameState.getLegalActions(self.index)
-  
-		values = [self.evaluate(gameState, a) for a in actions]
-  
+		# return random.choice(actions)
+   
+		values = [self.heuristically_evaluate_state(self.getSuccessor(gameState, action)) for action in actions]
 		maxValue = max(values)
-		bestActions = [a for a, v in zip(actions, values) if v == maxValue]
-		return bestActions[0]
+		bestActions = [a for a, v in zip(actions, values) if v==maxValue]
+		
+		bestDist = 9999
+		for action in actions:
+			successor = self.getSuccessor(gameState, action)
+			pos2 = successor.getAgentPosition(self.index)
+			dist = self.getMazeDistance(self.start,pos2)
+			if dist < bestDist:
+				bestAction = action
+				bestDist = dist
+		return bestAction
+  
+		return random.choice(bestActions)
+		# values = [self.evaluate(gameState, a) for a in actions]
+
+		# maxValue = max(values)
+		# bestActions = [a for a, v in zip(actions, values) if v == maxValue]
+		# return bestActions[0]
 
 
-	def evaluate_state(self, gameState):
+	def heuristically_evaluate_state(self, gameState):
 		# food heuristics
 		own_food_left = len(self.getFood(gameState).asList())
 		opp_food_left = len(self.getFoodYouAreDefending(gameState).asList())
