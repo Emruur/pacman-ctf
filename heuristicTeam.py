@@ -87,19 +87,9 @@ class DummyAgent(OffensiveReflexAgent):
 		actions = gameState.getLegalActions(self.index)
 		# return random.choice(actions)
    
-		values = [self.heuristically_evaluate_state(self.getSuccessor(gameState, action)) for action in actions]
+		values = [self.evaluate(gameState, action) for action in actions]
 		maxValue = max(values)
 		bestActions = [a for a, v in zip(actions, values) if v==maxValue]
-		
-		bestDist = 9999
-		for action in actions:
-			successor = self.getSuccessor(gameState, action)
-			pos2 = successor.getAgentPosition(self.index)
-			dist = self.getMazeDistance(self.start,pos2)
-			if dist < bestDist:
-				bestAction = action
-				bestDist = dist
-		return bestAction
   
 		return random.choice(bestActions)
 		# values = [self.evaluate(gameState, a) for a in actions]
@@ -108,33 +98,54 @@ class DummyAgent(OffensiveReflexAgent):
 		# bestActions = [a for a, v in zip(actions, values) if v == maxValue]
 		# return bestActions[0]
 
+	def evaluate(self, gameState, action):
+		foodAdvantage = self.getFoodAdvantage(gameState, action)
+		foodDistAdvantage = self.getFoodDistAdvantage(gameState, action)
+		oppDistAdvantage = self.getOppDistAdvantage(gameState, action)
 
-	def heuristically_evaluate_state(self, gameState):
-		# food heuristics
-		own_food_left = len(self.getFood(gameState).asList())
-		opp_food_left = len(self.getFoodYouAreDefending(gameState).asList())
-
-		### distance heuristics
-		dist_score = 0
-		myState = gameState.getAgentState(self.index)
-		myPos = myState.getPosition()
-		enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
-		own_turf = not gameState.getAgentState(self.index).isPacman # whether the agent is in their home color area (e.g. red agent in red)
-		for i,opp in enumerate(enemies):
-			dist_to_opp = self.getMazeDistance(myPos, opp.getPosition())
-			if own_turf and opp.isPacman: # if opp is an invader and current agent is "home"
-				dist_score -= dist_to_opp # smalle distance is better
-				print(f"minimizing {dist_to_opp}")
-			elif (not own_turf) and (not opp.isPacman): # current agent is the invader
-				dist_score += dist_to_opp # larger distance is better
-				print(f"maximizing {dist_to_opp}")
-			else: # current agent and opp are on opposite sides of the board
-				print("opp and agent on opposite sides")
-			
-        
 		# combining
-		print(f"own food + (-opp food) + (dist_score)")
-		print(f"({own_food_left})+(-{opp_food_left})+{dist_score}")
-		score = own_food_left + (-opp_food_left) + dist_score
-		print(f"total score to maximize: {score}")
+		print(f"({foodAdvantage})+({foodDistAdvantage})+{oppDistAdvantage}")
+		score = foodAdvantage + foodDistAdvantage + oppDistAdvantage
+		print(f"total score to maximize for {action}: {score}")
 		return score
+  
+	def getFoodAdvantage(self, gameState, action):
+		successor = self.getSuccessor(gameState, action)
+		ownFoodLeft = len(self.getFood(successor).asList())
+		oppFoodLeft = len(self.getFoodYouAreDefending(successor).asList())
+		foodAdvantage = ownFoodLeft-oppFoodLeft	
+		print(f"food advantage: {foodAdvantage}")
+		return foodAdvantage
+
+	def getFoodDistAdvantage(self, gameState, action):
+		'''move agents closer to food'''
+		successor = self.getSuccessor(gameState, action)
+		myState = successor.getAgentState(self.index)
+		myPos = myState.getPosition()
+  
+		foodList = self.getFood(gameState).asList()
+		if len(foodList)>0:
+			minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
+			print(f"closest food {minDistance} away")
+		else: 
+			minDistance =0
+		return -minDistance
+
+	def getOppDistAdvantage(self, gameState, action):
+		oppDistAdvantage = 0
+		successor = self.getSuccessor(gameState, action)
+		myState = successor.getAgentState(self.index)
+		myPos = myState.getPosition()
+		enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
+		ownTurf = not successor.getAgentState(self.index).isPacman # whether the agent is in their home color area (e.g. red agent in red)
+		for opp in enemies:
+			oppDist = self.getMazeDistance(myPos, opp.getPosition())
+			if ownTurf and opp.isPacman:# if opp is an invader and current agent is "home"
+				oppDistAdvantage -= oppDist # minimize distance
+				print(f"minimizing {oppDist}")
+			elif (not ownTurf) and (not opp.isPacman): # if current agent is the invader
+				oppDistAdvantage += oppDist # maximize distance
+				print(f"maximizing {oppDist}")
+			else: # if agent and and opp are on opposite sides
+				print("opp and agent on opposit esides")
+		return oppDistAdvantage
