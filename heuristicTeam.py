@@ -98,15 +98,16 @@ class DummyAgent(OffensiveReflexAgent):
 		# bestActions = [a for a, v in zip(actions, values) if v == maxValue]
 		# return bestActions[0]
 
-	def evaluate(self, gameState, action):
+	def evaluate(self, gameState, action, oppDistWeight=1):
+		print(f"### {self.index}, {action}###")
 		foodAdvantage = self.getFoodAdvantage(gameState, action)
 		foodDistAdvantage = self.getFoodDistAdvantage(gameState, action)
-		oppDistAdvantage = self.getOppDistAdvantage(gameState, action)
+		oppDistAdvantage = self.getOppDistAdvantage(gameState, action, oppDistWeight=4)
 
 		# combining
-		print(f"({foodAdvantage})+({foodDistAdvantage})+{oppDistAdvantage}")
+		print(f"foodAdv({foodAdvantage})+foodDistAdv({foodDistAdvantage})+oppDistAdv({oppDistAdvantage})")
 		score = foodAdvantage + foodDistAdvantage + oppDistAdvantage
-		print(f"total score to maximize for {action}: {score}")
+		print(f"total score for {action}: {score}")
 		return score
   
 	def getFoodAdvantage(self, gameState, action):
@@ -131,7 +132,7 @@ class DummyAgent(OffensiveReflexAgent):
 			minDistance =0
 		return -minDistance
 
-	def getOppDistAdvantage(self, gameState, action):
+	def getOppDistAdvantage(self, gameState, action, oppDistWeight):
 		oppDistAdvantage = 0
 		successor = self.getSuccessor(gameState, action)
 		myState = successor.getAgentState(self.index)
@@ -141,11 +142,11 @@ class DummyAgent(OffensiveReflexAgent):
 		for opp in enemies:
 			oppDist = self.getMazeDistance(myPos, opp.getPosition())
 			if ownTurf and opp.isPacman:# if opp is an invader and current agent is "home"
-				oppDistAdvantage -= oppDist # minimize distance
+				oppDistAdvantage += (1/(oppDist+1))*oppDistWeight # minimize distance
 				print(f"minimizing {oppDist}")
 			elif (not ownTurf) and (not opp.isPacman): # if current agent is the invader
-				oppDistAdvantage += oppDist # maximize distance
+				oppDistAdvantage -= (1/(oppDist+1))*oppDistWeight # maximize distance
 				print(f"maximizing {oppDist}")
 			else: # if agent and and opp are on opposite sides
-				print("opp and agent on opposit esides")
+				print("opp and agent on opposite sides")
 		return oppDistAdvantage
