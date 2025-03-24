@@ -100,6 +100,8 @@ class DummyAgent(OffensiveReflexAgent):
 
 	def evaluate(self, gameState, action, oppDistWeight=1):
 		print(f"### {self.index}, {action}###")
+		if action == 'Stop':
+			return -100
 		foodAdvantage = self.getFoodAdvantage(gameState, action)
 		foodDistAdvantage = self.getFoodDistAdvantage(gameState, action)
 		oppDistAdvantage = self.getOppDistAdvantage(gameState, action, oppDistWeight=4)
