@@ -83,9 +83,12 @@ class HeuristicAgent(ReflexCaptureAgent):
     features = util.Counter()
     successor = self.getSuccessor(gameState, action)
     
+    # score of the game
+    features["successorScore"] = gameState.data.score
+    
     # amount of food left    
     foodList = self.getFood(successor).asList()    
-    features['successorScore'] = -len(foodList)#self.getScore(successor)
+    features['foodLeft'] = -len(foodList)#self.getScore(successor)
 
     # Compute distance to the nearest food
     if len(foodList) > 0: # This should always be True,  but better safe than sorry
@@ -112,10 +115,18 @@ class HeuristicAgent(ReflexCaptureAgent):
     if action == Directions.STOP: features['stop'] = 1
     rev = Directions.REVERSE[gameState.getAgentState(self.index).configuration.direction]
     if action == rev: features['reverse'] = 1
-
+    
+    # Compute distance to defenders
+    defenders = [a for a in enemies if not a.isPacman and a.getPosition() != None]
+    if len(defenders) > 0:
+        dists = [self.getMazeDistance(myPos, a.getPosition) for a in invaders]
+        features['ghostDistance'] = min(dists)
+    
+	
+ 
     return features
 
   def getWeights(self, gameState, action):
-    return {'successorScore': 100, 'distanceToFood': -1,
-            'numInvaders': -1000, 'onDefense': 1,
-            'invaderDistance': -10, 'stop': -100, 'reverse': -2}
+    return {'successorScore': 1000, 'foodLeft': 100, 'distanceToFood': -1,
+            'numInvaders': -100, 'onDefense': 1,
+            'invaderDistance': -10, 'ghostDistance': 10,'stop': -100, 'reverse': -2}
