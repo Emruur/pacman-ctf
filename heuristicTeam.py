@@ -18,6 +18,7 @@ import random, time, util
 from game import Directions
 import game
 from MCTS import MCTS
+from game import Directions
 
 #################
 # Team creation #
@@ -106,9 +107,13 @@ class DummyAgent(OffensiveReflexAgent):
 		foodDistAdvantage = self.getFoodDistAdvantage(gameState, action)
 		oppDistAdvantage = self.getOppDistAdvantage(gameState, action, oppDistWeight=4)
 
+		reversing = 0
+		rev = Directions.REVERSE[gameState.getAgentState(self.index).configuration.direction]
+		if action == rev:
+			reversing = -2
 		# combining
-		print(f"foodAdv({foodAdvantage})+foodDistAdv({foodDistAdvantage})+oppDistAdv({oppDistAdvantage})")
-		score = foodAdvantage + foodDistAdvantage + oppDistAdvantage
+		print(f"foodAdv({foodAdvantage})+foodDistAdv({foodDistAdvantage})+oppDistAdv({oppDistAdvantage})+reversing({reversing})")
+		score = foodAdvantage + foodDistAdvantage + oppDistAdvantage + reversing
 		print(f"total score for {action}: {score}")
 		return score
   
