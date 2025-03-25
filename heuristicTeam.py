@@ -117,10 +117,11 @@ class HeuristicAgent(ReflexCaptureAgent):
     if action == rev: features['reverse'] = 1
     
     # Compute distance to defenders
-    defenders = [a for a in enemies if not a.isPacman and a.getPosition() != None]
-    if len(defenders) > 0:
-        dists = [self.getMazeDistance(myPos, a.getPosition) for a in invaders]
-        features['ghostDistance'] = min(dists)
+    if myState.isPacman:
+      defenders = [a for a in enemies if (not a.isPacman) and a.getPosition() != None]
+      if len(defenders) > 0:
+          dists = [self.getMazeDistance(myPos, a.getPosition()) for a in defenders]
+          features['ghostDistance'] = min(dists)
     
 	
  
@@ -129,4 +130,4 @@ class HeuristicAgent(ReflexCaptureAgent):
   def getWeights(self, gameState, action):
     return {'successorScore': 1000, 'foodLeft': 100, 'distanceToFood': -1,
             'numInvaders': -100, 'onDefense': 1,
-            'invaderDistance': -10, 'ghostDistance': 10,'stop': -100, 'reverse': -2}
+            'invaderDistance': -10, 'ghostDistance': 1,'stop': -100, 'reverse': -2}
