@@ -5,6 +5,8 @@ import time
 from baselineTeam import ReflexCaptureAgent
 from baselineTeam import OffensiveReflexAgent
 from baselineTeam import DefensiveReflexAgent
+from heuristicTeam import HeuristicAgent
+
 
 def evaluateGameState(gameState, agents, blueTeamIndices):
     """
@@ -172,7 +174,7 @@ class MCTSNode:
         self.children[move] = child_node
         return child_node
 
-    def rollout(self, rollout_depth,rollout_method,state_heuristic):
+    def rollout(self, rollout_depth,rollout_method,game_score):
         """
         Simulate a random playout (rollout) from the current state until game over.
         For each turn, the agent randomly chooses one legal move.
@@ -183,24 +185,30 @@ class MCTSNode:
         curr_agent_id = self.agent_id
         move_count= 0
 
-        agents_defense= [DefensiveReflexAgent(i) for i in range(2)]
-        agents_offense= [OffensiveReflexAgent(i) for i in range(2)]
-        agents= agents_defense + agents_offense
-        list(map(lambda agent: agent.registerInitialState(simulation_state), agents))
+        if rollout_method == "reflex":
+            agents_defense= [DefensiveReflexAgent(i) for i in range(2)]
+            agents_offense= [OffensiveReflexAgent(i) for i in range(2)]
+            agents= agents_defense + agents_offense
+            list(map(lambda agent: agent.registerInitialState(simulation_state), agents))
+        elif rollout_method == "custom_heuristic":
+            agents= [HeuristicAgent(i) for i in range(4)]
+            list(map(lambda agent: agent.registerInitialState(simulation_state), agents))
 
-        
         # Rollout until the game is over.
         while not simulation_state.isOver() and move_count <= rollout_depth:
             move_count += 1
             legal_actions = simulation_state.getLegalActions(curr_agent_id)
-            curr_agent= agents[curr_agent_id]
             if not legal_actions:
                 break  # no legal moves available
 
+            curr_agent= agents[curr_agent_id] # NOT used if random rollout
             if rollout_method == "random":
                 action = random.choice(legal_actions)
                 simulation_state= simulation_state.generateSuccessor(curr_agent_id, action)
             elif rollout_method == "reflex":
+                action= curr_agent.chooseAction(simulation_state)
+                simulation_state = curr_agent.getSuccessor(simulation_state, action)
+            elif rollout_method == "custom_heuristic":
                 action= curr_agent.chooseAction(simulation_state)
                 simulation_state = curr_agent.getSuccessor(simulation_state, action)
             
@@ -208,10 +216,12 @@ class MCTSNode:
         
         score= None
         
-        if state_heuristic:
+        if game_score == "reflex_heuristic":
             score= evaluateGameState(simulation_state, agents, simulation_state.blueTeam)
+        elif game_score == "custom_heursitic":
+            score = HeuristicAgent.evaluateState(simulation_state) 
         else:
-            score= binary_score_with_food_stats(simulation_state)
+            score= simulation_state.data.score
 
         print("Rollout ended: ",score,"in",move_count,"steps", "game over:",simulation_state.isOver())
 
@@ -237,7 +247,7 @@ class MCTSNode:
             node = node.parent
 
 class MCTS:
-    def __init__(self, agent_id, game_state, iterations=10, rollout_method= "random", state_heuristic= True, rollout_depth= 1000):
+    def __init__(self, agent_id, game_state, iterations=10, rollout_method= "random", state_heuristic= "default", rollout_depth= 1000):
         """
         Initialize MCTS with the starting agent and game state.
         

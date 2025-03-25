@@ -37,6 +37,41 @@ class HeuristicAgent(ReflexCaptureAgent):
   we give you to get an idea of what an offensive agent might look like,
   but it is by no means the best or only way to build an offensive agent.
   """
+  @staticmethod
+  def evaluateState(gameState):
+      """
+      Computes the state's value V(s) as the maximum Q(s, a) over all legal actions.
+      A temporary HeuristicAgent instance (with a default index, e.g., 0) is used
+      to leverage the existing evaluation logic.
+      """
+      dummy = HeuristicAgent(0)
+      legalActions = gameState.getLegalActions(dummy.index)
+      if not legalActions:
+          return 0
+      values = [dummy.evaluate(gameState, action) for action in legalActions]
+      return max(values)
+
+  def chooseActionSoftmax(self, gameState, temp):
+      """
+      Chooses an action stochastically using softmax over Q-values.
+      The probability of selecting an action a is proportional to exp(Q(s, a) / temp).
+      """
+      import math
+      actions = gameState.getLegalActions(self.index)
+      if not actions:
+          return None
+
+      # Compute Q-values for each legal action.
+      qValues = [self.evaluate(gameState, action) for action in actions]
+
+      # Compute the softmax probabilities.
+      expValues = [math.exp(q / temp) for q in qValues]
+      total = sum(expValues)
+      probs = [expVal / total for expVal in expValues]
+
+      # Stochastically choose an action based on the computed probabilities.
+      chosenAction = random.choices(actions, weights=probs, k=1)[0]
+      return chosenAction
 
 
   def chooseAction(self, gameState):
