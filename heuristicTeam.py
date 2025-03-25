@@ -51,34 +51,43 @@ class HeuristicAgent(ReflexCaptureAgent):
       values = [dummy.evaluate(gameState, action) for action in legalActions]
       return max(values)
 
-  def chooseActionSoftmax(self, gameState, temp):
-      """
-      Chooses an action stochastically using softmax over Q-values.
-      The probability of selecting an action a is proportional to exp(Q(s, a) / temp).
-      """
-      import math
-      actions = gameState.getLegalActions(self.index)
-      if not actions:
-          return None
+  def chooseActionSoftmax(self, gameState, softmax_temp):
+    """
+    Chooses an action stochastically using softmax over Q-values.
+    The probability of selecting an action a is proportional to exp((Q(s, a) - maxQ) / softmax_temp)
+    to ensure numerical stability and avoid division by zero.
+    """
+    import math, random
 
-      # Compute Q-values for each legal action.
-      qValues = [self.evaluate(gameState, action) for action in actions]
+    actions = gameState.getLegalActions(self.index)
+    if not actions:
+        return None
 
-      # Compute the softmax probabilities.
-      expValues = [math.exp(q / temp) for q in qValues]
-      total = sum(expValues)
-      probs = [expVal / total for expVal in expValues]
+    # Compute Q-values for each legal action.
+    qValues = [self.evaluate(gameState, action) for action in actions]
+    
+    # Normalize Q-values by subtracting the maximum Q-value for numerical stability.
+    maxQ = max(qValues)
+    expValues = [math.exp((q - maxQ) / softmax_temp) for q in qValues]
+    total = sum(expValues)
+    
+    # Fallback to a uniform distribution if total is zero (should rarely happen)
+    if total == 0:
+        probs = [1.0 / len(expValues)] * len(expValues)
+    else:
+        probs = [expVal / total for expVal in expValues]
+    
+    # Stochastically choose an action based on the computed probabilities.
+    chosenAction = random.choices(actions, weights=probs, k=1)[0]
+    return chosenAction
 
-      # Stochastically choose an action based on the computed probabilities.
-      chosenAction = random.choices(actions, weights=probs, k=1)[0]
-      return chosenAction
 
 
   def chooseAction(self, gameState):
     """
     Picks among the actions with the highest Q(s,a).
     """
-    print(f"### Agent {self.index} ###")
+    #print(f"### Agent {self.index} ###")
     actions = gameState.getLegalActions(self.index)
 
     # You can profile your evaluation time by uncommenting these lines
@@ -88,7 +97,7 @@ class HeuristicAgent(ReflexCaptureAgent):
 
     maxValue = max(values)
     bestActions = [a for a, v in zip(actions, values) if v == maxValue]
-    print(f"Best actions: {bestActions}")
+    #print(f"Best actions: {bestActions}")
     foodLeft = len(self.getFood(gameState).asList())
 
     if foodLeft <= 2:
@@ -111,7 +120,7 @@ class HeuristicAgent(ReflexCaptureAgent):
     features = self.getFeatures(gameState, action)
     weights = self.getWeights(gameState, action)
     # print(features)
-    print(f"{action}: {features*weights}")
+    #print(f"{action}: {features*weights}")
     return features * weights
   
   def getFeatures(self, gameState, action):

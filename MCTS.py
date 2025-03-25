@@ -174,7 +174,7 @@ class MCTSNode:
         self.children[move] = child_node
         return child_node
 
-    def rollout(self, rollout_depth,rollout_method,game_score):
+    def rollout(self, rollout_depth,rollout_method,game_score, softmax_rollout, softmax_temp):
         """
         Simulate a random playout (rollout) from the current state until game over.
         For each turn, the agent randomly chooses one legal move.
@@ -209,7 +209,10 @@ class MCTSNode:
                 action= curr_agent.chooseAction(simulation_state)
                 simulation_state = curr_agent.getSuccessor(simulation_state, action)
             elif rollout_method == "custom_heuristic":
-                action= curr_agent.chooseAction(simulation_state)
+                if softmax_rollout:
+                    action = curr_agent.chooseActionSoftmax(simulation_state, softmax_temp)
+                else:
+                    action= curr_agent.chooseAction(simulation_state)
                 simulation_state = curr_agent.getSuccessor(simulation_state, action)
             
             curr_agent_id = (curr_agent_id + 1) % 4
@@ -247,7 +250,7 @@ class MCTSNode:
             node = node.parent
 
 class MCTS:
-    def __init__(self, agent_id, game_state, iterations=10, rollout_method= "random", state_heuristic= "default", rollout_depth= 1000):
+    def __init__(self, agent_id, game_state, iterations=10, rollout_method= "random", state_heuristic= "default", rollout_depth= 1000, softmax_rollout= False, softmax_temp = 1):
         """
         Initialize MCTS with the starting agent and game state.
         
@@ -262,6 +265,8 @@ class MCTS:
         self.state_heuristic= state_heuristic
         self.rollout_method= rollout_method
         self.rollout_depth= rollout_depth
+        self.softmax_rollout= softmax_rollout
+        self.softmax_temp= softmax_temp
 
     def run(self):
         """
@@ -289,7 +294,7 @@ class MCTS:
             #print(f"Rollout {i} starting")
             start_time = time.time()  # record the start time
 
-            rollout_score = node.rollout(self.rollout_depth, self.rollout_method, self.state_heuristic)  # simulate a random playout
+            rollout_score = node.rollout(self.rollout_depth, self.rollout_method, self.state_heuristic, self.softmax_rollout, self.softmax_temp)  # simulate a random playout
 
             end_time = time.time()  # record the end time
             elapsed_time = end_time - start_time  # calculate elapsed time in seconds
@@ -304,11 +309,3 @@ class MCTS:
         # After iterations, select the child of the root with the most visits.
         best_move, best_child = max(self.root.children.items(), key=lambda item: item[1].visits)
         return best_move
-
-# Example usage:
-# Assuming you have a valid gameState with required methods,
-# and agent 0 is the red (maximizing) agent.
-#
-# mcts = MCTS(agent_id=0, game_state=initial_game_state, iterations=1000)
-# best_action = mcts.run()
-# print("Best action selected:", best_action)
