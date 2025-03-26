@@ -59,6 +59,7 @@ from game import Configuration
 from game import Agent
 from game import reconstituteGrid
 import sys, util, types, time, random, importlib
+import importlib.util
 import keyboardAgents
 import importlib.util
 

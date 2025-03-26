@@ -17,7 +17,7 @@ import random, time, util
 from game import Directions
 import game
 from MCTS import MCTS
-
+from baselineTeam import ReflexCaptureAgent
 #################
 # Team creation #
 #################
@@ -80,7 +80,33 @@ class DummyAgent(CaptureAgent):
 
 
 	def chooseAction(self, gameState):
-		mcts= MCTS(self.index, gameState)
+
+		# rollout_method can take:
+		#   - "random":         The agent selects a random legal action.
+		#   - "reflex":         The agent uses its reflex-based chooseAction method.
+		#   - "custom_heuristic": The agent uses its custom heuristic-based chooseAction method.
+		
+		# game_score can take:
+		#   - "reflex_heuristic": The score is computed using evaluateGameState().
+		#   - "custom_heursitic": The score is computed using HeuristicAgent.evaluateState().
+		#   - Any other value:   The score is taken directly from simulation_state.data.score.
+
+		iterations = 300
+		game_score= "default"
+		rollout_method= "custom_heuristic"
+		softmax_rollout= True
+		softmax_temp= 1
+		rollout_depth= 300
+
+		mcts= MCTS(self.index, gameState, 
+			 iterations= iterations, 
+			 state_heuristic=game_score, 
+			 rollout_method=rollout_method, 
+			 rollout_depth= rollout_depth, 
+			 softmax_rollout= softmax_rollout, 
+			 softmax_temp= softmax_temp)
+		
 		best_move= mcts.run()
+		print(self.index, best_move)
 		return best_move
 
