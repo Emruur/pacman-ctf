@@ -221,7 +221,7 @@ class MCTSNode:
         
         if game_score == "reflex_heuristic":
             score= evaluateGameState(simulation_state, agents, simulation_state.blueTeam)
-        elif game_score == "custom_heursitic":
+        elif game_score == "custom_heuristic":
             score = HeuristicAgent.evaluateState(simulation_state) 
         else:
             score= simulation_state.data.score
