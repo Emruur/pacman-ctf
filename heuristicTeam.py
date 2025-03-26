@@ -45,6 +45,7 @@ class HeuristicAgent(ReflexCaptureAgent):
       to leverage the existing evaluation logic.
       """
       dummy = HeuristicAgent(0)
+      dummy.registerInitialState(gameState)
       legalActions = gameState.getLegalActions(dummy.index)
       if not legalActions:
           return 0
