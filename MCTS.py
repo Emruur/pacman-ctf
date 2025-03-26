@@ -185,7 +185,8 @@ class MCTSNode:
         curr_agent_id = self.agent_id
         move_count= 0
 
-        if rollout_method == "reflex":
+        # if rollout_method == "reflex":
+        if rollout_method == "reflex" or rollout_method == "random":
             agents_defense= [DefensiveReflexAgent(i) for i in range(2)]
             agents_offense= [OffensiveReflexAgent(i) for i in range(2)]
             agents= agents_defense + agents_offense
@@ -195,6 +196,7 @@ class MCTSNode:
             list(map(lambda agent: agent.registerInitialState(simulation_state), agents))
 
         # Rollout until the game is over.
+        actions_taken = []
         while not simulation_state.isOver() and move_count <= rollout_depth:
             move_count += 1
             legal_actions = simulation_state.getLegalActions(curr_agent_id)
@@ -214,15 +216,18 @@ class MCTSNode:
                 else:
                     action= curr_agent.chooseAction(simulation_state)
                 simulation_state = curr_agent.getSuccessor(simulation_state, action)
-            
+            if curr_agent_id == ((self.agent_id-1)%4):
+                actions_taken.append(action)
             curr_agent_id = (curr_agent_id + 1) % 4
         
+        print(actions_taken)
         score= None
         
         if game_score == "reflex_heuristic":
             score= evaluateGameState(simulation_state, agents, simulation_state.blueTeam)
         elif game_score == "custom_heuristic":
-            score = HeuristicAgent.evaluateState(simulation_state) 
+            # score = HeuristicAgent.evaluateState(simulation_state) 
+            score = HeuristicAgent.evaluateState(curr_agent_id, simulation_state) 
         else:
             score= simulation_state.data.score
 
@@ -294,6 +299,7 @@ class MCTS:
             #print(f"Rollout {i} starting")
             start_time = time.time()  # record the start time
 
+            print(f"rollout {i} for {node.parent.agent_id} performing {node.action}")
             rollout_score = node.rollout(self.rollout_depth, self.rollout_method, self.state_heuristic, self.softmax_rollout, self.softmax_temp)  # simulate a random playout
 
             end_time = time.time()  # record the end time

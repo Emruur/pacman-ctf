@@ -91,12 +91,12 @@ class DummyAgent(CaptureAgent):
 		#   - "custom_heursitic": The score is computed using HeuristicAgent.evaluateState().
 		#   - Any other value:   The score is taken directly from simulation_state.data.score.
 
-		iterations = 300
-		game_score= "default"
-		rollout_method= "custom_heuristic"
+		iterations = ((3)**3)*4
+		game_score= "custom_heuristic"
+		rollout_method= "random"
 		softmax_rollout= True
 		softmax_temp= 1
-		rollout_depth= 300
+		rollout_depth= 3*3
 
 		mcts= MCTS(self.index, gameState, 
 			 iterations= iterations, 
@@ -107,6 +107,6 @@ class DummyAgent(CaptureAgent):
 			 softmax_temp= softmax_temp)
 		
 		best_move= mcts.run()
-		print(self.index, best_move)
+		print(f"Agent: {self.index}, best move: {best_move}")
 		return best_move
 

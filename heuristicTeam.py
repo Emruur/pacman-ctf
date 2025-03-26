@@ -38,13 +38,13 @@ class HeuristicAgent(ReflexCaptureAgent):
   but it is by no means the best or only way to build an offensive agent.
   """
   @staticmethod
-  def evaluateState(gameState):
+  def evaluateState(curr_agent_id, gameState):
       """
       Computes the state's value V(s) as the maximum Q(s, a) over all legal actions.
       A temporary HeuristicAgent instance (with a default index, e.g., 0) is used
       to leverage the existing evaluation logic.
       """
-      dummy = HeuristicAgent(0)
+      dummy = HeuristicAgent(curr_agent_id)
       dummy.registerInitialState(gameState)
       legalActions = gameState.getLegalActions(dummy.index)
       if not legalActions:
