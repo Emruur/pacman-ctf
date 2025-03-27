@@ -113,11 +113,13 @@ class Node():
 			a = random.randint(0, len(self.untried_moves)-1)
 			self.children.append(Node(self, self.untried_moves[a], (self.agent_id+1)%4, self.state.generateSuccessor(self.agent_id, self.untried_moves.pop(a))))
 		else:
-			next_states = [Node(self, self.untried_moves[i], self.agent_id+1 % 4, self.state.generateSuccessor(self.agent_id, self.untried_moves[i])) for i in range(len(self.untried_moves))]
-			if self.agent_id+1 % 4 in search_agent.getOpponents():
+			next_states = [Node(self, self.untried_moves[i], (self.agent_id+1) % 4, self.state.generateSuccessor(self.agent_id, self.untried_moves[i])) for i in range(len(self.untried_moves))]
+			if self.agent_id+1 % 4 in search_agent.getOpponents(next_states[0].state):
 				a = np.argmax([s.opp_heuristic() for s in next_states])
 			else:
 				a = np.argmax([s.self_heuristic() for s in next_states])
+			self.untried_moves.pop(a)
+			self.children.append(next_states[a])
 		return self.children[-1]
 	
 	def child_uct(self, child, c):
@@ -168,7 +170,7 @@ class Node():
 
 		
 class TreeSearch(CaptureAgent):
-	def __init__(self, agent_id, d=100, i=2000, random_rolls=True, beta=0):
+	def __init__(self, agent_id, d=80, i=500, random_rolls=False, beta=0):
 		super().__init__(agent_id)
 		global search_agent
 		search_agent = self
