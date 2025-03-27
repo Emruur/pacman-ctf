@@ -18,12 +18,14 @@ from game import Directions
 import game
 from MCTS import MCTS
 from baselineTeam import ReflexCaptureAgent
+from math import sqrt, log
+import numpy as np
 #################
 # Team creation #
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-							 first = 'DummyAgent', second = 'DummyAgent'):
+							 first = 'TreeSearch', second = 'TreeSearch'):
 	"""
 	This function should return a list of two agents that will form the
 	team, initialized using firstIndex and secondIndex as their agent
@@ -91,22 +93,97 @@ class DummyAgent(CaptureAgent):
 		#   - "custom_heursitic": The score is computed using HeuristicAgent.evaluateState().
 		#   - Any other value:   The score is taken directly from simulation_state.data.score.
 
-		iterations = 20
-		game_score= "custom_heuristic"
-		rollout_method= "random"
-		softmax_rollout= True
-		softmax_temp= 1
-		rollout_depth= 4
-
-		mcts= MCTS(self.index, gameState, 
-			 iterations= iterations, 
-			 state_heuristic=game_score, 
-			 rollout_method=rollout_method, 
-			 rollout_depth= rollout_depth, 
-			 softmax_rollout= softmax_rollout, 
-			 softmax_temp= softmax_temp)
-		
-		best_move= mcts.run()
-		print(f"Agent: {self.index}, best move: {best_move}")
+		print(gameState.getScore())
+		quit()
 		return best_move
+	
+class Node():
+	def __init__(self, parent, action_taken, agent_id, gameState):
+		self.agent_id = agent_id
+		self.parent = parent
+		self.parent_a = action_taken
+		self.tot_s = 0
+		self.visits = 0
+		self.state = gameState
+		self.untried_moves = gameState.getLegalActions(agent_id)[:]
+		self.children = []
 
+	def expand(self):
+		a = random.randint(0, len(self.untried_moves)-1)
+		self.children.append(Node(self, self.untried_moves[a], (self.agent_id+1)%4, self.state.generateSuccessor(self.agent_id, self.untried_moves.pop(a))))
+		return self.children[-1]
+	
+	def child_uct(self, child, c):
+		return (child.tot_s / child.visits) + (c * (sqrt((2 * log(self.visits)) / child.visits)))
+	
+	def bestChild(self, explo_factor=2, root_debug=False):
+		best = -99999
+		best_c = -1
+		for i, c in enumerate(self.children):
+			if root_debug:
+				print(self.child_uct(c,explo_factor))
+				print(f'best: {best}')
+			if self.child_uct(c, explo_factor) > best:
+				best_c = i
+				best = self.child_uct(c, explo_factor)
+
+		if best_c == -1:
+			print("error in best child selection")
+
+		return best_c, self.children[best_c]
+	
+	def backup(self, score):
+		self.visits += 1
+		self.tot_s += score
+		if not self.parent is None:
+			self.parent.backup(score)
+
+class TreeSearch(CaptureAgent):
+	def __init__(self, agent_id, d=100, i=2000):
+		super().__init__(agent_id)
+		self.rollout_d = d
+		self.rollout_i = i
+
+	def treePolicy(self, node):
+		for d in range(self.rollout_d):
+			if node.state.isOver():
+				return node, d
+			elif len(node.untried_moves) > 0:
+				return node.expand(), d
+			else:
+				node = node.bestChild()[1]
+		return node, self.rollout_d // 2
+
+	def defaultPolicy(self, node):
+		for depth in range(self.rollout_d):
+			if node.state.isOver():
+				return node
+			if len(node.untried_moves) > 0:
+				node = node.expand()
+			else:
+				node = node.bestChild()[1]
+		return node
+			
+
+	def chooseAction(self, gamestate):
+		root = Node(None, None, self.index, gamestate)
+		for n in range(self.rollout_i):
+			node, depth = self.treePolicy(root)
+			end_node = self.defaultPolicy(node)
+			
+			foodList = self.getFood(end_node.state).asList() 
+			if len(foodList) > 0:
+				myPos = end_node.state.getAgentState(self.index).getPosition()
+				minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
+				food_d = minDistance
+
+			#print(super().getScore(end_node.state) * 100 - food_d)
+			end_node.backup(super().getScore(end_node.state) * 100 - food_d - sum([end_node.state.getAgentState(i).numCarrying for i in self.getOpponents(end_node.state)]) + sum([end_node.state.getAgentState(i).numCarrying+end_node.state.getAgentState(i).numReturned for i in self.getTeam(end_node.state)]))
+
+		for c in root.children:
+			print(c.parent_a, c.tot_s/c.visits)
+			
+		print(f'action {root.bestChild(0)[1].parent_a} taken')
+		
+		return root.bestChild(0)[1].parent_a
+		
