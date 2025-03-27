@@ -10,7 +10,7 @@ def update_elo(winner_elo, loser_elo, point_diff=100, odds_diff=2, K=1):
 
 def run_game(p1, p1_elo, p2, p2_elo):
     #TODO add player options
-    options = capture.readCommand(['-q', "-r", p1, "-b", p2])
+    options = capture.readCommand(["-r", p1, "-b", p2])
     games = capture.runGames(**options)
     score = games[0].state.data.score
     if score > 0:
@@ -36,3 +36,4 @@ def elo_tournament(players, games_to_play=-1):
 
     return elo_scores
 
+print(run_game("baselineTeam", 100, "myTeam", 100))

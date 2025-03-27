@@ -174,7 +174,7 @@ class MCTSNode:
         self.children[move] = child_node
         return child_node
 
-    def rollout(self, rollout_depth,rollout_method,game_score, softmax_rollout, softmax_temp):
+    def rollout(self, rollout_depth,rollout_method,game_score, softmax_rollout, softmax_temp, debug=False):
         """
         Simulate a random playout (rollout) from the current state until game over.
         For each turn, the agent randomly chooses one legal move.
@@ -226,7 +226,8 @@ class MCTSNode:
         else:
             score= simulation_state.data.score
 
-        print("Rollout ended: ",score,"in",move_count,"steps", "game over:",simulation_state.isOver())
+        if debug:
+            print("Rollout ended: ",score,"in",move_count,"steps", "game over:",simulation_state.isOver())
 
         return score
 
@@ -250,7 +251,7 @@ class MCTSNode:
             node = node.parent
 
 class MCTS:
-    def __init__(self, agent_id, game_state, iterations=10, rollout_method= "random", state_heuristic= "default", rollout_depth= 1000, softmax_rollout= False, softmax_temp = 1):
+    def __init__(self, agent_id, game_state, iterations=10, rollout_method= "random", state_heuristic= "default", rollout_depth= 1000, softmax_rollout= False, softmax_temp = 1, debug=False):
         """
         Initialize MCTS with the starting agent and game state.
         
@@ -267,6 +268,7 @@ class MCTS:
         self.rollout_depth= rollout_depth
         self.softmax_rollout= softmax_rollout
         self.softmax_temp= softmax_temp
+        self.debug = debug
 
     def run(self):
         """
@@ -299,7 +301,8 @@ class MCTS:
             end_time = time.time()  # record the end time
             elapsed_time = end_time - start_time  # calculate elapsed time in seconds
 
-            print(f"Rollout {i} ended with score {rollout_score} in {elapsed_time:.2f} seconds")
+            if self.debug:
+                print(f"Rollout {i} ended with score {rollout_score} in {elapsed_time:.2f} seconds")
                         
             # 4. Backpropagation: propagate the score back up the tree.
             node.backpropagate(rollout_score)
