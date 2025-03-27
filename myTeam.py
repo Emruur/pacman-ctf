@@ -109,8 +109,17 @@ class Node():
 		self.children = []
 
 	def expand(self):
-		a = random.randint(0, len(self.untried_moves)-1)
-		self.children.append(Node(self, self.untried_moves[a], (self.agent_id+1)%4, self.state.generateSuccessor(self.agent_id, self.untried_moves.pop(a))))
+		if search_agent.random_rolls:
+			a = random.randint(0, len(self.untried_moves)-1)
+			self.children.append(Node(self, self.untried_moves[a], (self.agent_id+1)%4, self.state.generateSuccessor(self.agent_id, self.untried_moves.pop(a))))
+		else:
+			next_states = [Node(self, self.untried_moves[i], (self.agent_id+1) % 4, self.state.generateSuccessor(self.agent_id, self.untried_moves[i])) for i in range(len(self.untried_moves))]
+			if self.agent_id+1 % 4 in search_agent.getOpponents(next_states[0].state):
+				a = np.argmax([s.opp_heuristic() for s in next_states])
+			else:
+				a = np.argmax([s.self_heuristic() for s in next_states])
+			self.untried_moves.pop(a)
+			self.children.append(next_states[a])
 		return self.children[-1]
 	
 	def child_uct(self, child, c):
@@ -138,11 +147,37 @@ class Node():
 		if not self.parent is None:
 			self.parent.backup(score)
 
+	def self_heuristic(self):
+		global search_agent
+		foodList = search_agent.getFood(self.state).asList() 
+		if len(foodList) > 0:
+			myPos = self.state.getAgentState(self.agent_id).getPosition()
+			minDistance = min([search_agent.getMazeDistance(myPos, food) for food in foodList])
+			food_d = minDistance
+		
+		return search_agent.getScore(self.state) * 100 - food_d - sum([self.state.getAgentState(i).numCarrying for i in search_agent.getOpponents(self.state)]) + sum([self.state.getAgentState(i).numCarrying+self.state.getAgentState(i).numReturned for i in search_agent.getTeam(self.state)])
+
+	def opp_heuristic(self):
+		global search_agent
+		foodList = search_agent.getFood(self.state).asList() 
+		if len(foodList) > 0:
+			myPos = self.state.getAgentState(self.agent_id).getPosition()
+			minDistance = min([search_agent.getMazeDistance(myPos, food) for food in foodList])
+			food_d = minDistance
+		
+		return -search_agent.getScore(self.state) * 100 - food_d + sum([self.state.getAgentState(i).numCarrying for i in search_agent.getOpponents(self.state)]) - sum([self.state.getAgentState(i).numCarrying+self.state.getAgentState(i).numReturned for i in search_agent.getTeam(self.state)])
+
+
+		
 class TreeSearch(CaptureAgent):
-	def __init__(self, agent_id, d=100, i=2000):
+	def __init__(self, agent_id, d=80, i=500, random_rolls=False, beta=0):
 		super().__init__(agent_id)
+		global search_agent
+		search_agent = self
 		self.rollout_d = d
 		self.rollout_i = i
+		self.random_rolls = random_rolls
+		self.beta = beta
 
 	def treePolicy(self, node):
 		for d in range(self.rollout_d):
