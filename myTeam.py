@@ -109,17 +109,16 @@ class Node():
 		self.children = []
 
 	def expand(self):
-		if search_agent.random_rolls:
-			a = random.randint(0, len(self.untried_moves)-1)
-			self.children.append(Node(self, self.untried_moves[a], (self.agent_id+1)%4, self.state.generateSuccessor(self.agent_id, self.untried_moves.pop(a))))
-		else:
+		a = random.randint(0, len(self.untried_moves)-1)
+		self.children.append(Node(self, self.untried_moves[a], (self.agent_id+1)%4, self.state.generateSuccessor(self.agent_id, self.untried_moves.pop(a))))
+		'''else:
 			next_states = [Node(self, self.untried_moves[i], (self.agent_id+1) % 4, self.state.generateSuccessor(self.agent_id, self.untried_moves[i])) for i in range(len(self.untried_moves))]
 			if self.agent_id+1 % 4 in search_agent.getOpponents(next_states[0].state):
 				a = np.argmax([s.opp_heuristic() for s in next_states])
 			else:
 				a = np.argmax([s.self_heuristic() for s in next_states])
 			self.untried_moves.pop(a)
-			self.children.append(next_states[a])
+			self.children.append(next_states[a])'''
 		return self.children[-1]
 	
 	def child_uct(self, child, c):
@@ -181,7 +180,7 @@ class Node():
 
 		
 class TreeSearch(CaptureAgent):
-	def __init__(self, agent_id, d=80, i=500, random_rolls=True, beta=0.3, rave=True):
+	def __init__(self, agent_id, d=80, i=500, random_rolls=False, beta=0.3, rave=False):
 		super().__init__(agent_id)
 		global search_agent
 		search_agent = self
@@ -210,10 +209,17 @@ class TreeSearch(CaptureAgent):
 		for depth in range(self.rollout_d):
 			if node.state.isOver():
 				return node
-			if len(node.untried_moves) > 0:
-				node = node.expand()
 			else:
-				node = node.bestChild()[1]
+				if self.random_rolls:
+					a = random.choice(node.state.getLegalActions(node.agent_id)[:])
+					node = Node(node, a, (node.agent_id+1)%4, node.state.generateSuccessor(node.agent_id, a))
+				else:
+					next_states = [Node(node, a, (node.agent_id+1) % 4, node.state.generateSuccessor(node.agent_id, a)) for a in node.state.getLegalActions(node.agent_id)[:]]
+					if node.agent_id+1 % 4 in self.getOpponents(next_states[0].state):
+						a = np.argmax([s.opp_heuristic() for s in next_states])
+					else:
+						a = np.argmax([s.self_heuristic() for s in next_states])
+					node = next_states[a]
 		return node
 			
 
