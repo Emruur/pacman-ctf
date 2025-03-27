@@ -174,7 +174,7 @@ class MCTSNode:
         self.children[move] = child_node
         return child_node
 
-    def rollout(self, rollout_depth,rollout_method,game_score, softmax_rollout, softmax_temp):
+    def rollout(self, rollout_depth,rollout_method,game_score, softmax_rollout, softmax_temp, root):
         """
         Simulate a random playout (rollout) from the current state until game over.
         For each turn, the agent randomly chooses one legal move.
@@ -227,7 +227,7 @@ class MCTSNode:
             score= evaluateGameState(simulation_state, agents, simulation_state.blueTeam)
         elif game_score == "custom_heuristic":
             # score = HeuristicAgent.evaluateState(simulation_state) 
-            score = HeuristicAgent.evaluateState(curr_agent_id, simulation_state) 
+            score = HeuristicAgent.evaluateState(root.agent_id, simulation_state) 
         else:
             score= simulation_state.data.score
 
@@ -248,7 +248,7 @@ class MCTSNode:
         score = rollout_score
         while node is not None:
             # If the node's agent is blue (minimizer), flip the score.
-            if node.is_blue():
+            if not node.is_blue():
                 score = -score
             node.visits += 1
             node.score += score
@@ -300,7 +300,7 @@ class MCTS:
             start_time = time.time()  # record the start time
 
             print(f"rollout {i} for {node.parent.agent_id} performing {node.action}")
-            rollout_score = node.rollout(self.rollout_depth, self.rollout_method, self.state_heuristic, self.softmax_rollout, self.softmax_temp)  # simulate a random playout
+            rollout_score = node.rollout(self.rollout_depth, self.rollout_method, self.state_heuristic, self.softmax_rollout, self.softmax_temp, root = self.root)  # simulate a random playout
 
             end_time = time.time()  # record the end time
             elapsed_time = end_time - start_time  # calculate elapsed time in seconds
