@@ -180,7 +180,7 @@ class Node():
 
 		
 class TreeSearch(CaptureAgent):
-	def __init__(self, agent_id, d=80, i=500, random_rolls=False, beta=0.3, rave=False):
+	def __init__(self, agent_id, d=80, i=500, random_rolls=True, beta=0.3, rave=False):
 		super().__init__(agent_id)
 		global search_agent
 		search_agent = self

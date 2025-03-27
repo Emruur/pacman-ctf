@@ -1,5 +1,9 @@
 import capture
 import random
+import pickle as pkl
+import matplotlib.pyplot as plt
+
+elo_histories = []
 
 def update_elo(winner_elo, loser_elo, point_diff=100, odds_diff=2, K=1):
     #the update rule used here attributes a 2:1 odds of winning to each 100 points of difference by default
@@ -9,13 +13,14 @@ def update_elo(winner_elo, loser_elo, point_diff=100, odds_diff=2, K=1):
     return winner_elo, loser_elo
 
 def run_game(p1, p1_elo, p2, p2_elo):
-    #TODO add player options
-    options = capture.readCommand(["-r", p1, "-b", p2])
+    options = capture.readCommand(['-q', "-r", p1, "-b", p2])
     games = capture.runGames(**options)
     score = games[0].state.data.score
     if score > 0:
+        print('p1 victory')
         p1_elo, p2_elo = update_elo(p1_elo, p2_elo)
     elif score < 0:
+        print('p2 victory')
         p2_elo, p1_elo = update_elo(p2_elo, p1_elo)
     return p1_elo, p2_elo
 
@@ -28,12 +33,38 @@ def elo_tournament(players, games_to_play=-1):
         games_to_play = 50*len(players)
 
     elo_scores = {p:500 for p in players}
+    for p in players:
+        elo_histories.append([500])
     for g in range(games_to_play):
         p1, p2 = random.sample(players, 2)
+        print(f'playing game {g+1} of {games_to_play}: {p1} vs {p2}')
         elo_p1 = elo_scores[p1]
         elo_p2 = elo_scores[p2]
-        elo_p1, elo_p2 = run_game(p1, elo_p1, p2, elo_p2)
+        elo_scores[p1], elo_scores[p2] = run_game(p1, elo_p1, p2, elo_p2)
+        
+        for i, p in enumerate(players):
+            elo_histories[i].append(elo_scores[p])
+
+        print(elo_histories)
+        with open('elo_scores', 'wb') as f:
+            pkl.dump(elo_scores, f)
 
     return elo_scores
 
-print(run_game("baselineTeam", 100, "myTeam", 100))
+if __name__ == '__main__':
+    players = ['baselineTeam', 'myTeam']
+    scores = elo_tournament(players, 20*len(players))
+    with open('elo_scores', 'wb') as f:
+        pkl.dump(scores, f)
+    
+    fig, ax = plt.subplots()
+    ax.set_ylabel("Elo Score")
+    ax.set_xlabel("Games")
+    ax.set_title("Elo Score Evolutions")
+    for i, p in enumerate(players):
+        ax.plot([x for x in range(20*len(players))], elo_histories[i], label=p)
+
+    ax.legend()
+    fig.savefig("elo_scores_fig.png",dpi=300)
+
+    fig.show()
