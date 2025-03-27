@@ -20,6 +20,9 @@ from MCTS import MCTS
 from baselineTeam import ReflexCaptureAgent
 from math import sqrt, log
 import numpy as np
+
+from baselineTeam import OffensiveReflexAgent
+from baselineTeam import DefensiveReflexAgent
 #################
 # Team creation #
 #################
@@ -44,59 +47,7 @@ def createTeam(firstIndex, secondIndex, isRed,
 	# The following line is an example only; feel free to change it.
 	return [eval(first)(firstIndex), eval(second)(secondIndex)]
 
-##########
-# Agents #
-##########
 
-class DummyAgent(CaptureAgent):
-	"""
-	A Dummy agent to serve as an example of the necessary agent structure.
-	You should look at baselineTeam.py for more details about how to
-	create an agent as this is the bare minimum.
-	"""
-
-	def registerInitialState(self, gameState):
-		"""
-		This method handles the initial setup of the
-		agent to populate useful fields (such as what team
-		we're on).
-
-		A distanceCalculator instance caches the maze distances
-		between each pair of positions, so your agents can use:
-		self.distancer.getDistance(p1, p2)
-
-		IMPORTANT: This method may run for at most 15 seconds.
-		"""
-
-		'''
-		Make sure you do not delete the following line. If you would like to
-		use Manhattan distances instead of maze distances in order to save
-		on initialization time, please take a look at
-		CaptureAgent.registerInitialState in captureAgents.py.
-		'''
-		CaptureAgent.registerInitialState(self, gameState)
-
-		'''
-		Your initialization code goes here, if you need any.
-		'''
-
-
-	def chooseAction(self, gameState):
-
-		# rollout_method can take:
-		#   - "random":         The agent selects a random legal action.
-		#   - "reflex":         The agent uses its reflex-based chooseAction method.
-		#   - "custom_heuristic": The agent uses its custom heuristic-based chooseAction method.
-		
-		# game_score can take:
-		#   - "reflex_heuristic": The score is computed using evaluateGameState().
-		#   - "custom_heursitic": The score is computed using HeuristicAgent.evaluateState().
-		#   - Any other value:   The score is taken directly from simulation_state.data.score.
-
-		print(gameState.getScore())
-		quit()
-		return best_move
-	
 class Node():
 	def __init__(self, parent, action_taken, agent_id, gameState):
 		self.agent_id = agent_id
@@ -180,7 +131,7 @@ class Node():
 
 		
 class TreeSearch(CaptureAgent):
-	def __init__(self, agent_id, d=80, i=500, random_rolls=False, beta=0.3, rave=False):
+	def __init__(self, agent_id, d=25, i=100, random_rolls=False, beta=0.3, rave=False):
 		super().__init__(agent_id)
 		global search_agent
 		search_agent = self
@@ -206,6 +157,14 @@ class TreeSearch(CaptureAgent):
 		return node, self.rollout_d // 2
 
 	def defaultPolicy(self, node):
+		agents_defense = [DefensiveReflexAgent(i) for i in range(2)]
+		agents_offense = [OffensiveReflexAgent(i) for i in range(2,4)]
+		agents = agents_defense + agents_offense
+		list(map(lambda agent: agent.registerInitialState(node.state), agents))
+		curr_id = node.agent_id
+		self_id= curr_id
+		simulation_state = node.state
+
 		for depth in range(self.rollout_d):
 			if node.state.isOver():
 				return node
@@ -214,14 +173,48 @@ class TreeSearch(CaptureAgent):
 					a = random.choice(node.state.getLegalActions(node.agent_id)[:])
 					node = Node(node, a, (node.agent_id+1)%4, node.state.generateSuccessor(node.agent_id, a))
 				else:
-					next_states = [Node(node, a, (node.agent_id+1) % 4, node.state.generateSuccessor(node.agent_id, a)) for a in node.state.getLegalActions(node.agent_id)[:]]
-					if node.agent_id+1 % 4 in self.getOpponents(next_states[0].state):
-						a = np.argmax([s.opp_heuristic() for s in next_states])
+					curr_agent = agents[curr_id]
+					if random.random() < 0.2:
+						legal_actions = simulation_state.getLegalActions(curr_id)
+						action = random.choice(legal_actions)
 					else:
-						a = np.argmax([s.self_heuristic() for s in next_states])
-					node = next_states[a]
+						action = curr_agent.chooseAction(simulation_state)
+      
+					simulation_state = curr_agent.getSuccessor(simulation_state, action)
+					curr_id = (curr_id + 1) % 4
+					node = Node(node, action, curr_id, simulation_state)
+     
+     
 		return node
-			
+
+
+	def calculate_score(self, state, food_d):
+		"""
+		Calculate the score based on the current game state and food distance.
+
+		Parameters:
+		- state: The current game state.
+		- food_d: The distance to the nearest food.
+
+		Returns:
+		- Computed score as a float or integer.
+		"""
+		# Base score from the superclass method, scaled by 100
+		base_score = super().getScore(state) * 100
+
+		# Penalty based on the distance to the nearest food
+		food_distance_penalty = food_d
+
+		# Penalty for opponents' carried food
+		opponents_food_penalty = sum(state.getAgentState(i).numCarrying for i in self.getOpponents(state))
+
+		# Reward for team's carried and returned food
+		team_food_reward = sum(state.getAgentState(i).numCarrying + state.getAgentState(i).numReturned for i in self.getTeam(state))
+
+		# Final score calculation
+		final_score = base_score - food_distance_penalty - opponents_food_penalty + team_food_reward
+
+		return final_score	
 
 	def chooseAction(self, gamestate):
 		self.actions = directions = {Directions.NORTH: [0, 0],
@@ -232,7 +225,7 @@ class TreeSearch(CaptureAgent):
 		root = Node(None, None, self.index, gamestate)
 		for n in range(self.rollout_i):
 			node, depth = self.treePolicy(root)
-			end_node = self.defaultPolicy(node)
+			end_node= self.defaultPolicy(node)
 			
 			foodList = self.getFood(end_node.state).asList() 
 			if len(foodList) > 0:
@@ -240,8 +233,8 @@ class TreeSearch(CaptureAgent):
 				minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
 				food_d = minDistance
 
-			#print(super().getScore(end_node.state) * 100 - food_d)
-			end_node.backup(super().getScore(end_node.state) * 100 - food_d - sum([end_node.state.getAgentState(i).numCarrying for i in self.getOpponents(end_node.state)]) + sum([end_node.state.getAgentState(i).numCarrying+end_node.state.getAgentState(i).numReturned for i in self.getTeam(end_node.state)]))
+			score = self.calculate_score(end_node.state, food_d)
+			end_node.backup(score)
 
 		for c in root.children:
 			print(c.parent_a, c.tot_s/c.visits)
