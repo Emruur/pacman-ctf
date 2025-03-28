@@ -251,10 +251,10 @@ class TreeSearch(CaptureAgent):
 				dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
 				features['invaderDistance'] = np.mean(min(dists), features['invaderDistance'])
 
-			action = node.parent_a
-			if action == Directions.STOP: features['stop'] = 1
-			rev = Directions.REVERSE[state.getAgentState(i).configuration.direction]
-			if action == rev: features['reverse'] = 1
+			# action = node.parent_a
+			# if action == Directions.STOP: features['stop'] = 1
+			# rev = Directions.REVERSE[state.getAgentState(i).configuration.direction]
+			# if action == rev: features['reverse'] = 1
 
 			# Compute distance to defenders
 			if myState.isPacman:
