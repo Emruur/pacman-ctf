@@ -249,7 +249,8 @@ class TreeSearch(CaptureAgent):
 			features['numInvaders'] = len(invaders)
 			if len(invaders) > 0:
 				dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
-				features['invaderDistance'] = np.mean(min(dists), features['invaderDistance'])
+				if features['invaderDistance']:
+					features['invaderDistance'] = np.mean(min(dists), features['invaderDistance'])
 
 			# action = node.parent_a
 			# if action == Directions.STOP: features['stop'] = 1
