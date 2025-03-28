@@ -23,6 +23,7 @@ import numpy as np
 
 from baselineTeam import OffensiveReflexAgent
 from baselineTeam import DefensiveReflexAgent
+from heuristicTeam import HeuristicAgent
 #################
 # Team creation #
 #################
@@ -131,13 +132,14 @@ class Node():
 
 		
 class TreeSearch(CaptureAgent):
-	def __init__(self, agent_id, d=25, i=100, random_rolls=False, beta=0.3, rave=False):
+	def __init__(self, agent_id, d=25, i=100, random_rolls=False, custom_heuristic = True, beta=0.3, rave=False):
 		super().__init__(agent_id)
 		global search_agent
 		search_agent = self
 		self.rollout_d = d
 		self.rollout_i = i
 		self.random_rolls = random_rolls
+		self.custom_heuristic = custom_heuristic
 		self.beta = beta
 		self.actions = directions = {Directions.NORTH: [0, 0],
                    Directions.SOUTH: [0, 0],
@@ -157,9 +159,13 @@ class TreeSearch(CaptureAgent):
 		return node, self.rollout_d // 2
 
 	def defaultPolicy(self, node):
-		agents_defense = [DefensiveReflexAgent(i) for i in range(2)]
-		agents_offense = [OffensiveReflexAgent(i) for i in range(2,4)]
-		agents = agents_defense + agents_offense
+		
+		if self.custom_heuristic:
+			agents = [HeuristicAgent(i) for i in range(4)]
+		else:
+			agents_defense = [DefensiveReflexAgent(i) for i in range(2)]
+			agents_offense = [OffensiveReflexAgent(i) for i in range(2,4)]
+			agents = agents_defense + agents_offense
 		list(map(lambda agent: agent.registerInitialState(node.state), agents))
 		curr_id = node.agent_id
 		self_id= curr_id
@@ -216,6 +222,47 @@ class TreeSearch(CaptureAgent):
 
 		return final_score	
 
+	def calculate_score_extended(self, state, food_d):
+		features = util.Counter()
+		# score of the game
+		features["score"] = super().getScore(state)
+
+		# amount of food left
+		foodList = self.getFood(state).asList()    
+		features['foodLeft'] = -len(foodList)#self.getScore(successor)
+
+		# dist to nearest food
+		features['distanceToFood'] = food_d
+		for i in self.getTeam(state):
+			# position heuristics
+			myState = state.getAgentState(i)
+			myPos = myState.getPosition()
+	
+			# Computes whether we're on defense (1) or offense (0)
+			features['onDefense'] = 1
+			if myState.isPacman: features['onDefense'] = 0
+
+			# Computes distance to invaders we can see
+			enemies = [state.getAgentState(i) for i in self.getOpponents(state)]
+			invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
+			features['numInvaders'] = len(invaders)
+			if len(invaders) > 0:
+				dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
+				features['invaderDistance'] = np.mean(min(dists), features['invaderDistance'])
+    
+			# Compute distance to defenders
+			if myState.isPacman:
+				defenders = [a for a in enemies if (not a.isPacman) and a.getPosition() != None]
+				if len(defenders) > 0:
+					dists = [self.getMazeDistance(myPos, a.getPosition()) for a in defenders]
+					features['ghostDistance'] = min(dists)
+
+			weights = {'successorScore': 1000, 'foodLeft': 100, 'distanceToFood': -1,
+            'numInvaders': -100, 'onDefense': 1,
+            'invaderDistance': -10, 'ghostDistance': 1,'stop': -100, 'reverse': -2}
+   
+			return features*weights
+   
 	def chooseAction(self, gamestate):
 		self.actions = directions = {Directions.NORTH: [0, 0],
                    Directions.SOUTH: [0, 0],
@@ -233,7 +280,8 @@ class TreeSearch(CaptureAgent):
 				minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
 				food_d = minDistance
 
-			score = self.calculate_score(end_node.state, food_d)
+			# score = self.calculate_score(end_node.state, food_d)
+			score = self.calculate_score_extended(end_node.state, food_d)
 			end_node.backup(score)
 
 		for c in root.children:
