@@ -222,7 +222,8 @@ class TreeSearch(CaptureAgent):
 
 		return final_score	
 
-	def calculate_score_extended(self, state, food_d):
+	def calculate_score_extended(self, node, food_d):
+		state = node.state
 		features = util.Counter()
 		# score of the game
 		features["score"] = super().getScore(state)
@@ -249,7 +250,12 @@ class TreeSearch(CaptureAgent):
 			if len(invaders) > 0:
 				dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
 				features['invaderDistance'] = np.mean(min(dists), features['invaderDistance'])
-    
+
+			action = node.parent_a
+			if action == Directions.STOP: features['stop'] = 1
+			rev = Directions.REVERSE[state.getAgentState(i).configuration.direction]
+			if action == rev: features['reverse'] = 1
+
 			# Compute distance to defenders
 			if myState.isPacman:
 				defenders = [a for a in enemies if (not a.isPacman) and a.getPosition() != None]
@@ -281,7 +287,7 @@ class TreeSearch(CaptureAgent):
 				food_d = minDistance
 
 			# score = self.calculate_score(end_node.state, food_d)
-			score = self.calculate_score_extended(end_node.state, food_d)
+			score = self.calculate_score_extended(end_node, food_d)
 			end_node.backup(score)
 
 		for c in root.children:
