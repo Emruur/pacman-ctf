@@ -23,6 +23,7 @@ import numpy as np
 
 from baselineTeam import OffensiveReflexAgent
 from baselineTeam import DefensiveReflexAgent
+from heuristicTeam import HeuristicAgent
 #################
 # Team creation #
 #################
@@ -123,12 +124,13 @@ class Node():
 ##########################################################
 
 class TreeSearch(CaptureAgent):
-    def __init__(self, agent_id, rollout_depth=40, rollout_i=300, rave_constant=100):
+    def __init__(self, agent_id, rollout_depth=25, rollout_i=100, rave_constant=100, custom_heuristic = False):
         super().__init__(agent_id)
         self.rollout_depth = rollout_depth  # Maximum depth for the rollout
         self.rollout_i = rollout_i          # Number of MCTS simulations per move
         self.rave_constant = rave_constant  # Constant used in dynamic beta for RAVE
-
+        self.custom_heuristic = custom_heuristic
+        
     def simulation(self, root):
         """
         Run one simulation (playout) from the root.
@@ -162,11 +164,19 @@ class TreeSearch(CaptureAgent):
         current_agent = node.agent_id
         rollout_actions = []
         depth = 0
+        
+        if self.custom_heuristic:
+            agents = [HeuristicAgent(i) for i in range(4)]
+            list(map(lambda agent: agent.registerInitialState(node.state), agents))
         while (not simulation_state.isOver()) and (depth < self.rollout_depth):
             legal_moves = simulation_state.getLegalActions(current_agent)
             if not legal_moves:
                 break
-            a = random.choice(legal_moves)
+            if self.custom_heuristic:
+                curr_agent = agents[current_agent]
+                a = curr_agent.chooseAction(simulation_state)
+            else:
+                a = random.choice(legal_moves)
             rollout_actions.append(a)
             simulation_state = simulation_state.generateSuccessor(current_agent, a)
             current_agent = (current_agent + 1) % 4
@@ -183,7 +193,10 @@ class TreeSearch(CaptureAgent):
         else:
             food_d = 0
 
-        score = self.calculate_score(simulation_state, food_d)
+        if self.custom_heuristic:
+            score = self.calculate_score_extended(simulation_state, food_d)
+        else:
+            score = self.calculate_score(simulation_state, food_d)
         return visited, actions, score
 
     def backup(self, visited, actions, score):
@@ -229,3 +242,52 @@ class TreeSearch(CaptureAgent):
         team_food_reward = sum(state.getAgentState(i).numCarrying + state.getAgentState(i).numReturned for i in self.getTeam(state))
         final_score = base_score - food_d - opponents_food_penalty + team_food_reward
         return final_score
+
+    def calculate_score_extended(self, node, food_d):
+        # state = node.state
+        state = node
+        features = util.Counter()
+		# score of the game
+        features["score"] = super().getScore(state)
+
+		# amount of food left
+        foodList = self.getFood(state).asList()    
+        features['foodLeft'] = -len(foodList)#self.getScore(successor)
+
+		# dist to nearest food
+        features['distanceToFood'] = food_d
+        for i in self.getTeam(state):
+			# position heuristics
+            myState = state.getAgentState(i)
+            myPos = myState.getPosition()
+	
+			# Computes whether we're on defense (1) or offense (0)
+            features['onDefense'] = 1
+            if myState.isPacman: features['onDefense'] = 0
+
+            # Computes distance to invaders we can see
+            enemies = [state.getAgentState(i) for i in self.getOpponents(state)]
+            invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
+            features['numInvaders'] = len(invaders)
+            if len(invaders) > 0:
+                dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
+                if features['invaderDistance']:
+                    features['invaderDistance'] = np.mean(min(dists), features['invaderDistance'])
+
+            # action = node.parent_a
+            # if action == Directions.STOP: features['stop'] = 1
+            # rev = Directions.REVERSE[state.getAgentState(i).configuration.direction]
+            # if action == rev: features['reverse'] = 1
+
+            # Compute distance to defenders
+            if myState.isPacman:
+                defenders = [a for a in enemies if (not a.isPacman) and a.getPosition() != None]
+                if len(defenders) > 0:
+                    dists = [self.getMazeDistance(myPos, a.getPosition()) for a in defenders]
+                    features['ghostDistance'] = min(dists)
+
+            weights = {'successorScore': 1000, 'foodLeft': 100, 'distanceToFood': -1,
+            'numInvaders': -100, 'onDefense': 1,
+            'invaderDistance': -10, 'ghostDistance': 1,'stop': -100, 'reverse': -2}
+
+            return features*weights
