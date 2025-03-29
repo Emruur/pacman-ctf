@@ -287,8 +287,10 @@ class TreeSearch(CaptureAgent):
 				minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
 				food_d = minDistance
 
-			# score = self.calculate_score(end_node.state, food_d)
-			score = self.calculate_score_extended(end_node, food_d)
+			if self.custom_heuristic:
+				score = self.calculate_score_extended(end_node, food_d)
+			else:
+				score = self.calculate_score(end_node.state, food_d)
 			end_node.backup(score)
 
 		for c in root.children:
