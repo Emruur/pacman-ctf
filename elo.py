@@ -52,7 +52,7 @@ def elo_tournament(players, games_to_play=-1):
     return elo_scores
 
 if __name__ == '__main__':
-    players = ['heuristicTeam','ucbTeam','ucbheuristicTeam','raveTeam','raveHeuristicTeam']
+    players = ['heuristicTeam','ucbTeam','ucbheuristicTeam','raveTeam','raveHeuristicTeam','baselineTeam']
     scores = elo_tournament(players, 20*len(players))
     with open('elo_scores', 'wb') as f:
         pkl.dump(scores, f)
