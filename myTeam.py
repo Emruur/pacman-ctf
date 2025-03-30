@@ -84,7 +84,7 @@ class Node():
 		for i, c in enumerate(self.children):
 			if root_debug:
 				print(self.child_uct(c,explo_factor))
-				print(f'best: {best}')
+				#print(f'best: {best}')
 			if not search_agent.rave:
 				if self.child_uct(c, explo_factor) > best:
 					best_c = i
@@ -96,7 +96,8 @@ class Node():
 					best = v
 
 		if best_c == -1:
-			print("error in best child selection")
+			#print("error in best child selection")
+			pass
 
 		return best_c, self.children[best_c]
 	
@@ -294,9 +295,10 @@ class TreeSearch(CaptureAgent):
 			end_node.backup(score)
 
 		for c in root.children:
-			print(c.parent_a, c.tot_s/c.visits)
+			#print(c.parent_a, c.tot_s/c.visits)
+			pass
 			
-		print(f'action {root.bestChild(0)[1].parent_a} taken')
+		#print(f'action {root.bestChild(0)[1].parent_a} taken')
 		
 		return root.bestChild(0)[1].parent_a
 		
