@@ -187,6 +187,7 @@ class TreeSearch(CaptureAgent):
 
         # Evaluate the final simulation state.
         foodList = self.getFood(simulation_state).asList()
+        food_d=0
         if foodList:
             myPos = simulation_state.getAgentState(self.index).getPosition()
             food_d = min([self.getMazeDistance(myPos, food) for food in foodList])
